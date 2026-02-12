@@ -4,6 +4,7 @@ __pycache__/
 dev-ignore/
 report.md
 eval_bundle/
+*.DS_Store
 
 # Secrets
 .env
@@ -11,3 +12,12 @@ eval_bundle/
 # Local setup
 CLAUDE.md
 wandb/
+./claude
+
+# Externel code
+external/
+
+# User prompts
+prompts/
+
+

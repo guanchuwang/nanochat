@@ -1,0 +1,8 @@
+
+
+
+think hard 仔细学习./nanochat/models/ebt/modeling_ebt.py中对于EBT_NLP的定义，理解这其中的逻辑。用./nanochat/gpt.py的方式重新定义这个模型在./nanochat/ebt.py中。注意./nanochat/ebt.py的核心逻辑遵循./nanochat/models/ebt/modeling_ebt.py中的定义，但是代码实现方式遵循./nanochat/gpt.py。我已经为你创建了./nanochat/ebt.py，你将Class定义在其中就行了，你可以定义任意你需要的辅助函数或者Class。
+
+
+
+
