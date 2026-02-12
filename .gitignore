@@ -15,7 +15,7 @@ wandb/
 ./claude
 
 # Externel code
-external/
+./nanochat/external/
 
 # User prompts
 prompts/
