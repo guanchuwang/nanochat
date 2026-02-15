@@ -1,45 +1,33 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-
-from transformers import AutoTokenizer
+from claude_class.torchlightning_module import LightningModule
+# import torch.optim as optim
+# from torchmetrics import Accuracy
+# from transformers import AutoTokenizer
 
 import math
 import random
 import os
-from utils import init_whole_model_weights, setup_ebt,  mask_q_tokens, scale_clamp
-from utils import MLP, Memory_Augmented_MLP, Memory_Gating_MLP
+from utils import setup_ebt, init_whole_model_weights
+from utils import MLP, Memory_Augmented_MLP, Memory_Gating_MLP, mask_q_tokens
 from replay_buffer import CausalReplayBuffer
 
+import ipdb
 
-class HParams:
-    """Simple namespace class to replace LightningModule's hparams."""
-    def __init__(self, params_dict):
-        for key, value in params_dict.items():
-            setattr(self, key, value)
-
-    def __contains__(self, key):
-        return hasattr(self, key)
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-
-class EBT_NLP(nn.Module):
+class EBT_NLP(LightningModule):
     def __init__(self, hparams):
         super().__init__()
-        if isinstance(hparams, dict):  # passed in from model ckpt
-            self.hparams = HParams(hparams)
+        if isinstance(hparams, dict):#passed in from model ckpt
+            self.hparams.update(hparams)
         else:
-            self.hparams = HParams(vars(hparams))
+            self.hparams.update(vars(hparams))
         
-        tokenizer = AutoTokenizer.from_pretrained(self.hparams.tokenizer, clean_up_tokenization_spaces = False)
-        self.tokenizer_pad_token_id = tokenizer.eos_token_id # is token 0, was right padding things
+        # tokenizer = AutoTokenizer.from_pretrained(self.hparams.tokenizer, clean_up_tokenization_spaces = False)
+        self.tokenizer = self.hparams.tokenizer
+        self.tokenizer_pad_token_id = None # Nanochat doesn't have <|pad|> or <|eos|> # self.tokenizer.eos_token_id 
         
-        self.vocab_size = len(tokenizer) # self.vocab_size = self.tokenizer.vocab_size caused errors since is smaller than len(self.tokenizer), is 50254 for neox-20b, len tokenizer is 50277 so decided to use that
+        self.vocab_size = self.tokenizer.get_vocab_size() # len(self.tokenizer) # self.vocab_size = self.tokenizer.vocab_size caused errors since is smaller than len(self.tokenizer), is 50254 for neox-20b, len tokenizer is 50277 so decided to use that
         
         self.alpha = nn.Parameter(torch.tensor(float(self.hparams.mcmc_step_size)), requires_grad=self.hparams.mcmc_step_size_learnable)
         self.langevin_dynamics_noise_std = nn.Parameter(torch.tensor(float(self.hparams.langevin_dynamics_noise)), requires_grad=False) # if using self.hparams.langevin_dynamics_noise_learnable this will be turned on in warm_up_finished func
@@ -191,14 +179,19 @@ class EBT_NLP(nn.Module):
     def forward_loss_wrapper(self, x, phase="train"):
         no_randomness = False if phase == "train" else True
         if not no_randomness and self.mcmc_replay_buffer: # dont do this when doing val/testing
-            all_tokens = x['input_ids'].squeeze(dim=1)
+            # all_tokens = x['input_ids'].squeeze(dim=1)
+            all_tokens = x[0].squeeze(dim=0)
             input_ids, replay_buffer_logits, next_token_indices = self.replay_buffer.get_batch(all_tokens) # this automatically does indexing for input ids and next token indices while also passing back the logits
             predicted_distributions, predicted_energies = self(input_ids, return_raw_logits = True, replay_buffer_logits = replay_buffer_logits, no_randomness = no_randomness)
             self.replay_buffer.update(all_tokens.detach(), predicted_distributions[-1].detach()) # update using the final predicted distributions
         else:
-            input_ids = x['input_ids'].squeeze(dim=1)[:, :-1]
+            input_ids = x[0].squeeze(dim=0)
+            next_token_indices = x[1].squeeze(dim=0)
             predicted_distributions, predicted_energies = self(input_ids, return_raw_logits = True, no_randomness = no_randomness)
-            next_token_indices = x['input_ids'].squeeze(dim=1)[:, 1:] # squeeze was to remove 1 on 2nd dim
+
+            # input_ids = x['input_ids'].squeeze(dim=1)[:, :-1]
+            # predicted_distributions, predicted_energies = self(input_ids, return_raw_logits = True, no_randomness = no_randomness)
+            # next_token_indices = x['input_ids'].squeeze(dim=1)[:, 1:] # squeeze was to remove 1 on 2nd dim
 
         if self.hparams.execution_mode == "finetune": # Only tokens after "[[Answer]]: " will be calculated in finetune
             next_token_indices = mask_q_tokens(next_token_indices, self.tokenizer)
@@ -213,10 +206,10 @@ class EBT_NLP(nn.Module):
                 else:
                     label_smoothing = ((total_mcmc_steps - 1) - mcmc_step) / (total_mcmc_steps - 1) * self.hparams.soften_target_prob_dist
                 predicted_distribution = predicted_distribution.reshape(-1, self.vocab_size)
-                cce_loss = F.cross_entropy(predicted_distribution, next_token_indices, ignore_index=self.tokenizer_pad_token_id, label_smoothing=label_smoothing)
+                cce_loss = F.cross_entropy(predicted_distribution, next_token_indices, label_smoothing=label_smoothing) # , ignore_index=self.tokenizer_pad_token_id
             else:
                 predicted_distribution = self.log_softmax(predicted_distribution).reshape(-1, self.vocab_size)
-                cce_loss = F.nll_loss(predicted_distribution, next_token_indices, ignore_index=self.tokenizer_pad_token_id)
+                cce_loss = F.nll_loss(predicted_distribution, next_token_indices) # , ignore_index=self.tokenizer_pad_token_id)
             
             if self.hparams.truncate_mcmc:
                 if mcmc_step == (total_mcmc_steps - 1):
@@ -314,7 +307,7 @@ class EBT_NLP(nn.Module):
         fake_energies = predicted_energies[-1] # B*S, 1
         energy_stack = torch.cat([real_energies, fake_energies], dim=1)
         energy_targets = torch.zeros(real_energies.shape[0], dtype=torch.long, device=fake_energies.device)
-        padding_positions = (next_token_indices == self.tokenizer_pad_token_id).reshape(-1)
+        padding_positions = None # (next_token_indices == self.tokenizer_pad_token_id).reshape(-1)
         energy_targets[padding_positions] = -100 # prevents nans instead of using self.tokenizer_pad_token_id, as setting this to 0 leads to issues
         contrastive_loss = F.cross_entropy(-1 * energy_stack, energy_targets, ignore_index=-100)
         return contrastive_loss

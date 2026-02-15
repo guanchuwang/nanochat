@@ -20,4 +20,7 @@ nanochat/external/
 # User prompts
 prompts/
 
+# Garbage
+nanochat/garbage/
+
 

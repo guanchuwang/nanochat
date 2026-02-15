@@ -24,6 +24,8 @@ dependencies = [
     "uvicorn>=0.36.0",
     "wandb>=0.21.3",
     "zstandard>=0.25.0",
+    "torchmetrics==1.8.2",
+    "ipdb==0.13.13",
 ]
 
 [dependency-groups]

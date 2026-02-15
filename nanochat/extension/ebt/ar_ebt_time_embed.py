@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from utils import init_whole_model_weights
+from utils import init_whole_model_weights, EBTModelArgs
 
 
 class BackwardRMSNormFunction(torch.autograd.Function):
