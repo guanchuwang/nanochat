@@ -844,6 +844,7 @@ class Trainer:
 class IterableTrainer(Trainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        pass
     
     def fit(self, *args, **kwargs):
         return super().fit(*args, **kwargs)
