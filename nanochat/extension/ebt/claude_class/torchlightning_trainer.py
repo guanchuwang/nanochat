@@ -854,6 +854,9 @@ class IterableTrainer(Trainer):
     def test(self, *args, **kwargs):
         return super().test(*args, **kwargs)
 
+    def _resume_from_checkpoint(self, *args, **kwargs):
+        return super()._resume_from_checkpoint(*args, **kwargs)
+
 
 
 
