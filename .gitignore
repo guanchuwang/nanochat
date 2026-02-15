@@ -1,5 +1,4 @@
 .venv/
-__pycache__/
 *.pyc
 dev-ignore/
 report.md
@@ -9,18 +8,27 @@ eval_bundle/
 # Secrets
 .env
 
-# Local setup
+# Claude
 CLAUDE.md
+nanochat/extension/ebt/.claude/
+nanochat/extension/ebt/CLAUDE.md
+.claude/
+
+# Pycache
+__pycache__/
+nanochat/extension/ebt/__pycache__/
+nanochat/__pycache__/
+
+# Logs
 wandb/
-./claude
+nanochat/extension/ebt/logs/
 
 # Externel code
 nanochat/external/
 
 # User prompts
-prompts/
+prompt/
 
-# Garbage
-nanochat/garbage/
+
 
 
