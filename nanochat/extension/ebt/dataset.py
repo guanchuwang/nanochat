@@ -44,8 +44,10 @@ class IterableDataset(IterableDataset):
         self.device = device
         self.resume_state_dict = resume_state_dict
         # self.buffer_size = buffer_size
+        self.batch_idx = 0
 
     def __iter__(self):
+        
         return tokenizing_distributed_data_loader_with_state_bos_bestfit(
             tokenizer=self.tokenizer,
             B=self.B,
@@ -57,6 +59,22 @@ class IterableDataset(IterableDataset):
             resume_state_dict=self.resume_state_dict,
             # buffer_size=1000,
         )
+
+        # inputs, targets, state_dict = tokenizing_distributed_data_loader_with_state_bos_bestfit(
+        #     tokenizer=self.tokenizer,
+        #     B=self.B,
+        #     T=self.T,
+        #     split=self.split,
+        #     # tokenizer_threads=self.tokenizer_threads,
+        #     # tokenizer_batch_size=self.tokenizer_batch_size,
+        #     device=self.device,
+        #     resume_state_dict=self.resume_state_dict,
+        #     # buffer_size=1000,
+        # )
+        # state_dict["batch_idx"] = self.batch_idx
+        # self.batch_idx += 1
+        # yield inputs, targets, state_dict
+
     
     def __len__(self):
         return self.max_iter

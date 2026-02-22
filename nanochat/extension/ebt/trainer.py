@@ -264,10 +264,10 @@ class ModelTrainer(LightningModule):
                 print("calling GC manually")
                 gc.collect()            
            
-    def on_train_epoch_end(self):
-        if self.hparams.optimizer != "adamw": # e.g. for lars need to manually update epoch
-            optimizer = self.trainer.optimizers[0]
-            optimizer.update_epoch(self.current_epoch)   
+    # def on_train_epoch_end(self): ## not effective for EBT
+    #     if self.hparams.optimizer != "adamw": # e.g. for lars need to manually update epoch
+    #         optimizer = self.trainer.optimizers[0]
+    #         optimizer.update_epoch(self.current_epoch)   
 
     def validation_step(self, batch, batch_idx):
         eval_step_dict = self.eval_step(batch, "valid")
@@ -368,6 +368,7 @@ class ModelTrainer(LightningModule):
     def get_optimizer_scheduler_dict(self, optimizer_parameters):
         optimizer = self.get_optimizer(optimizer_parameters)
         lr_scheduler = self.get_lr_scheduler(optimizer)
+        # lr_schedule will work each step
         return {
             'optimizer': optimizer,
             'lr_scheduler': {
@@ -575,7 +576,16 @@ class ModelTrainer(LightningModule):
         return collate_fn
     
     def  train_dataloader(self):
-        from dataset import generate_dataloader
+        from dataset import generate_dataloader, IterableDataset
+        # train_dataloader = IterableDataset(
+        #         tokenizer=self.hparams.tokenizer,
+        #         B=self.hparams.batch_size_per_device,
+        #         T=self.hparams.context_length,
+        #         split="train",
+        #         max_iter=self.hparams.max_steps,
+        #         device=self.device,
+        #         resume_state_dict=None
+        #     )
 
         train_dataloader = generate_dataloader(
             tokenizer=self.hparams.tokenizer,
@@ -589,7 +599,17 @@ class ModelTrainer(LightningModule):
         return train_dataloader
 
     def val_dataloader(self):
-        from dataset import generate_dataloader
+        from dataset import generate_dataloader, IterableDataset
+
+        # val_dataloader = IterableDataset(
+        #         tokenizer=self.hparams.tokenizer,
+        #         B=self.hparams.batch_size_per_device,
+        #         T=self.hparams.context_length,
+        #         split="val",
+        #         max_iter=self.hparams.val_steps,
+        #         device=self.device,
+        #         resume_state_dict=None
+        #     )
 
         val_dataloader = generate_dataloader(
             tokenizer=self.hparams.tokenizer,

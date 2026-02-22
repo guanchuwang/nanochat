@@ -30,7 +30,7 @@ from torch.utils.data import DataLoader, DistributedSampler, Subset
 from tqdm import tqdm
 
 from claude_class.torchlightning_function import DDPStrategy, ModelCheckpoint
-
+import ipdb
 
 # ============================================================================
 # ModelSummary callback
@@ -653,6 +653,8 @@ class Trainer:
         start_epoch = self.current_epoch
 
         for epoch in range(start_epoch, self.max_epochs):
+
+            print(f"Epoch: {epoch}")
             if self._should_stop:
                 break
 
@@ -685,10 +687,11 @@ class Trainer:
 
                 batch = self._move_batch_to_device(batch)
                 model.on_train_batch_start(batch, batch_idx)
-
+                
                 # Forward pass with optional autocast
                 with self._autocast_ctx():
                     loss = model.training_step(batch, batch_idx)
+                    print(loss)
 
                 if loss is None:
                     continue
@@ -841,22 +844,7 @@ class Trainer:
 
 
 
-class IterableTrainer(Trainer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        pass
-    
-    def fit(self, *args, **kwargs):
-        return super().fit(*args, **kwargs)
-    
-    def _run_validation(self, *args, **kwargs):
-        return super()._run_validation(*args, **kwargs)
 
-    def test(self, *args, **kwargs):
-        return super().test(*args, **kwargs)
-
-    def _resume_from_checkpoint(self, *args, **kwargs):
-        return super()._resume_from_checkpoint(*args, **kwargs)
 
 
 
