@@ -83,6 +83,12 @@ class LightningModule(nn.Module):
         # Flag to track if we're in training mode (for logging purposes)
         self._in_training: bool = False
 
+        # Whether validation is currently running (used to gate log buffering)
+        self._is_validating: bool = False
+        # Accumulates per-batch scalar values logged during validation;
+        # flushed to wandb once at on_validation_epoch_end
+        self._val_log_buffer: Dict[str, List] = {}
+
     @property
     def hparams(self) -> AttributeDict:
         """
@@ -293,16 +299,24 @@ class LightningModule(nn.Module):
         pass
 
     def on_validation_epoch_start(self) -> None:
-        """
-        Called at the beginning of each validation epoch.
-        """
-        pass
+        """Mark the start of validation; clear the per-epoch log buffer."""
+        self._is_validating = True
+        self._val_log_buffer.clear()
 
     def on_validation_epoch_end(self) -> None:
-        """
-        Called at the end of each validation epoch.
-        """
-        pass
+        """Flush buffered validation metrics to wandb as a single log call."""
+        if self._val_log_buffer and self.logger is not None:
+            avg_metrics: Dict[str, Any] = {}
+            for name, values in self._val_log_buffer.items():
+                numeric = [v.item() if isinstance(v, torch.Tensor) else float(v)
+                           for v in values]
+                avg_metrics[name] = sum(numeric) / len(numeric)
+            if hasattr(self.logger, 'log_metrics'):
+                self.logger.log_metrics(avg_metrics, step=self.global_step)
+            elif hasattr(self.logger, 'experiment') and hasattr(self.logger.experiment, 'log'):
+                self.logger.experiment.log(avg_metrics, step=self.global_step)
+        self._is_validating = False
+        self._val_log_buffer.clear()
 
     def on_test_epoch_start(self) -> None:
         """
@@ -480,16 +494,21 @@ class LightningModule(nn.Module):
                 value = value.detach()
             # Keep multi-element tensors as-is for histogram logging
 
-        # Store for potential retrieval
+        # Store for per-batch retrieval (used by _run_validation's averaging logic)
         self._logged_metrics[name] = value
 
-        # If we have a logger, log the value
         if logger and self.logger is not None:
-            if hasattr(self.logger, 'log_metrics'):
-                self.logger.log_metrics({name: value}, step=self.global_step)
-            elif hasattr(self.logger, 'experiment') and hasattr(self.logger.experiment, 'log'):
-                # Wandb-style logging
-                self.logger.experiment.log({name: value}, step=self.global_step)
+            if self._is_validating:
+                # Buffer validation metrics; flushed once at on_validation_epoch_end
+                if name not in self._val_log_buffer:
+                    self._val_log_buffer[name] = []
+                self._val_log_buffer[name].append(value)
+            else:
+                # Training: log immediately
+                if hasattr(self.logger, 'log_metrics'):
+                    self.logger.log_metrics({name: value}, step=self.global_step)
+                elif hasattr(self.logger, 'experiment') and hasattr(self.logger.experiment, 'log'):
+                    self.logger.experiment.log({name: value}, step=self.global_step)
 
     def log_dict(
         self,

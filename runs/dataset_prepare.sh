@@ -45,5 +45,5 @@ echo "Waiting for dataset download to complete..."
 wait $DATASET_DOWNLOAD_PID
 
 # d24 model (slightly overtrained is enough to beat GPT-2 => increase data:params ratio from compute optimal 10.5 (default) to 12)
-bash runs/ebt_s1.sh
+# bash runs/ebt_s1.sh
 

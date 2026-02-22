@@ -263,7 +263,7 @@ def set_trainer(args, wandb_logger, checkpoint_callback, stage = "train"):
     profiler = None if args.profiler == "" else args.profiler
     gradient_clip_val = args.gradient_clip_val if args.gradient_clip_val > 0 else None
     limit_val_batches = 0 if args.overfit_batches > 0 else args.limit_val_batches
-    val_check_interval = args.val_check_interval if args.val_check_interval == 1.0 else args.val_check_interval * args.accumulate_grad_batches  #NOTE the reason we mult by args.accumulate_grad_batches is because of this bug https://github.com/Lightning-AI/pytorch-lightning/issues/12205
+    # val_check_interval = args.val_check_interval if args.val_check_interval == 1.0 else args.val_check_interval * args.accumulate_grad_batches  #NOTE the reason we mult by args.accumulate_grad_batches is because of this bug https://github.com/Lightning-AI/pytorch-lightning/issues/12205
     limit_test_batches = args.limit_test_batches if args.limit_test_batches == 1 else args.limit_test_batches * args.accumulate_grad_batches
     # trainer = Trainer(
     #     accelerator="auto",
@@ -313,8 +313,8 @@ def set_trainer(args, wandb_logger, checkpoint_callback, stage = "train"):
         gradient_clip_val=gradient_clip_val,
         overfit_batches=args.overfit_batches,
         profiler=profiler,
-        val_check_interval=val_check_interval,
-        check_val_every_n_epoch=args.check_val_every_n_epoch,
+        val_every_n_step=args.val_every_n_step,
+        val_after_n_step=args.val_after_n_step,
         deterministic=args.deterministic,
         log_every_n_steps=args.log_every_n_steps,
         accumulate_grad_batches=args.accumulate_grad_batches,
@@ -633,7 +633,9 @@ if __name__ == '__main__':
     
     parser.add_argument("--val_check_interval", help="interval to do validation per training epoch, 1 means once per epoch. useful if epochs are too large to wait to do validation", type=float, default=1.0)
 
-    parser.add_argument("--check_val_every_n_epoch", help="how many epochs to wait before doing validation. is useful when you have a small dataset and dont want to do validation every time", type=int, default=1)
+    parser.add_argument("--val_every_n_step", help="interval to do validation in steps", type=int, default=15000)
+
+    parser.add_argument("--val_after_n_step", help="how many steps to wait before doing validation. is useful when you have a small dataset and dont want to do validation every time", type=int, default=0)
 
     parser.add_argument("--val_steps", help="how many steps of validation", type=int, default=1000)
 

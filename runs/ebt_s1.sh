@@ -3,6 +3,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --nodes=1
 #SBATCH --gpus-per-node=4
+source .venv/bin/activate
 
 cd nanochat/extension/ebt
 ### LOG INFO ###
@@ -12,6 +13,8 @@ export RUN_NAME="ebt-xxs-bs_256_s1_lr_"
 # NOTE ctrl d ALL THREE of above to modify job-name, output, and RUN_NAME (which should all be the same)
 export MODEL_NAME="${RUN_NAME%%-*}"
 export MODEL_SIZE="${RUN_NAME#*-}"; export MODEL_SIZE="${MODEL_SIZE%%-*}"
+
+export WANDB_API_KEY="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"
 mkdir -p logs/slurm/nlp/
 module purge
 
@@ -51,11 +54,12 @@ python train.py \
 --max_scheduling_steps 1000000 \
 --warm_up_steps 10000 \
 \
---dataset_name "pajama" \
+--dataset_name "nanochat" \
 --num_workers 12 \
---validation_split_pct 0.0005 \
---val_check_interval 15000 \
+--val_every_n_step 1000 \
+--val_after_n_step 0 \
 --val_steps 1000 \
+--val_sanity 1 \
 \
 --wandb_project 'nlp_pretrain' \
 \
