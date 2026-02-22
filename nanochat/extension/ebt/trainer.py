@@ -40,6 +40,8 @@ from modeling_ebt import EBT_NLP
 
 
 from claude_class.torchlightning_module import LightningModule
+from claude_class.iteratabledataset import generate_dataloader, IterableDataset
+
 # from utils import save_frames, denormalize, load_image_encoder, center_crop_arr
 from generate import generate_text, get_ppl
 # from inference.vid.generate_video import generate_video
@@ -576,7 +578,6 @@ class ModelTrainer(LightningModule):
         return collate_fn
     
     def  train_dataloader(self):
-        from dataset import generate_dataloader, IterableDataset
         # train_dataloader = IterableDataset(
         #         tokenizer=self.hparams.tokenizer,
         #         B=self.hparams.batch_size_per_device,
@@ -599,7 +600,6 @@ class ModelTrainer(LightningModule):
         return train_dataloader
 
     def val_dataloader(self):
-        from dataset import generate_dataloader, IterableDataset
 
         # val_dataloader = IterableDataset(
         #         tokenizer=self.hparams.tokenizer,

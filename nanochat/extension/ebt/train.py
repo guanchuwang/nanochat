@@ -5,7 +5,7 @@ import os
 from argparse import ArgumentParser
 import time
 from claude_class.torchlightning_trainer import Trainer
-from claude_class.iterativetrainer import IterableTrainer
+from claude_class.iteratabletrainer import IterableTrainer
 from claude_class.torchlightning_trainer import ModelSummary
 import random
 from datetime import datetime
