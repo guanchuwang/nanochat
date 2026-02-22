@@ -60,7 +60,7 @@ python train.py \
 --wandb_project 'nlp_pretrain' \
 \
 --log_model_archi \
---log_gradients \
+# --log_gradients \
 \
 --set_matmul_precision "medium" \
 --wandb_watch \
