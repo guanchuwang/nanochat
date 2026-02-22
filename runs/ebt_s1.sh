@@ -14,7 +14,7 @@ export RUN_NAME="ebt-xxs-bs_256_s1_lr_"
 export MODEL_NAME="${RUN_NAME%%-*}"
 export MODEL_SIZE="${RUN_NAME#*-}"; export MODEL_SIZE="${MODEL_SIZE%%-*}"
 
-export WANDB_API_KEY="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"
+export WANDB_API_KEY="<Your Wandb API Key>"
 mkdir -p logs/slurm/nlp/
 module purge
 
